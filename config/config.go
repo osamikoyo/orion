@@ -8,11 +8,20 @@ import (
 )
 
 type (
+	// Target stores target info
+	Target struct {
+		// Url stores target url
+		Url string
+		// HealthEndpoint stores endpoint for healthchecker
+		// Body of get request must be "OK" or "NOT"
+		HealthEndpoint string `yaml:"health_endpoint"`
+	}
+
 	Gateway struct {
 		// Prefix stores prefix to send request in target
 		Prefix string `yaml:"prefix"`
 		// Target stores url of proxy target
-		Target string `yaml:"target"`
+		Targets []string `yaml:"targets"`
 		// Auth stores auth off or on
 		Auth bool `yaml:"auth"`
 		// Cash stores cashing off or on
@@ -25,7 +34,8 @@ type (
 	}
 
 	RateLimitingConfig struct {
-		MaxRequest int `yaml:"max_req"`
+		Use        bool `yaml:"use"`
+		MaxRequest int  `yaml:"max_req"`
 	}
 
 	CORSConfig struct {
@@ -37,10 +47,14 @@ type (
 	Config struct {
 		// Addr stores address of api gateway
 		Addr string `yaml:"addr"`
+		// AuthConfig stores config for auth
+		AuthConfig AuthConfig `yaml:"auth"`
 		// CORS off or on
 		CORS bool `yaml:"cors"`
 		// CORSConfig stores config for CORS
 		CorsConfig CORSConfig `yaml:"cors_config"`
+		// RLconfig stores config for rate limiting
+		RateLimitingConfig RateLimitingConfig `yaml:"rate_limiting"`
 		// Gateway stores all gateways to route
 		Gateways []Gateway `yaml:"gateways"`
 	}
