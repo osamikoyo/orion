@@ -21,7 +21,7 @@ type (
 		// Prefix stores prefix to send request in target
 		Prefix string `yaml:"prefix"`
 		// Target stores url of proxy target
-		Targets []string `yaml:"targets"`
+		Targets []Target `yaml:"targets"`
 		// Auth stores auth off or on
 		Auth bool `yaml:"auth"`
 		// Cash stores cashing off or on
