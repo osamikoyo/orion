@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 type item struct {
@@ -12,17 +14,20 @@ type item struct {
 }
 
 type Cache struct {
+	logger *zerolog.Logger
+
 	cacheMap   map[string]item
 	mx         sync.Mutex
 	quit       chan struct{}
 	defaultTTL time.Duration
 }
 
-func NewCache(defaultTTL, cleanupInterval time.Duration) *Cache {
+func NewCache(logger *zerolog.Logger, defaultTTL, cleanupInterval time.Duration) *Cache {
 	c := &Cache{
 		cacheMap:   make(map[string]item),
 		quit:       make(chan struct{}),
 		defaultTTL: defaultTTL,
+		logger:     logger,
 	}
 
 	go func() {
