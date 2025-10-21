@@ -1,0 +1,23 @@
+addr: ":8443"
+tlc:
+  cert: "certs/server.crt"
+  key: "certs/server.key"
+auth:
+  key: "my-secret-jwt-key"
+cors: false
+cors_config:
+  allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+  allow_headers: ["Content-Type", "Authorization"]
+  max_age: 3600
+rate_limiting:
+  use: false
+  max_req: 100
+gateways:
+  - prefix: "/users"
+    targets:
+      - url: "localhost:8981"
+        health_endpoint: "/health"
+      - url: "localhost:8980" 
+        health_endpoint: "/health"
+    auth: false 
+    cash: false
