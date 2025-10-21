@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/osamikoyo/orion/config"
 	"github.com/rs/zerolog"
@@ -49,17 +48,15 @@ func (hc *HealthChecker) Check(_ context.Context) map[string]bool {
 		mu sync.Mutex
 	)
 
-	// declare context
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
 	// send http request on every health endpoint
 	for target, endpoint := range hc.healthEndPoints {
 		// start request gourutine every iteration
 		wg.Go(func() {
+			path := fmt.Sprintf("http://%s%s", target, endpoint)
 
+			hc.logger.Info().Msgf("forming http request to %s", path)
 			// create http request with context
-			_, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s%s", target, endpoint), nil)
+			_, err := http.Get(path)
 			if err != nil {
 				// if unhealthy
 				hc.logger.Warn().Msgf("unhealthy target %s wit err: %v", target, err)
@@ -79,6 +76,8 @@ func (hc *HealthChecker) Check(_ context.Context) map[string]bool {
 			}
 		})
 	}
+
+	wg.Wait()
 
 	return health
 }
