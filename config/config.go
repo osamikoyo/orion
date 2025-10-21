@@ -17,6 +17,11 @@ type (
 		HealthEndpoint string `yaml:"health_endpoint"`
 	}
 
+	TLS struct {
+		Cert string `yaml:"cert"`
+		Key  string `yaml:"key"`
+	}
+
 	Gateway struct {
 		// Prefix stores prefix to send request in target
 		Prefix string `yaml:"prefix"`
@@ -47,6 +52,7 @@ type (
 	Config struct {
 		// Addr stores address of api gateway
 		Addr string `yaml:"addr"`
+		Tls  TLS    `yaml:"tlc"`
 		// AuthConfig stores config for auth
 		AuthConfig AuthConfig `yaml:"auth"`
 		// CORS off or on
