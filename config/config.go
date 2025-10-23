@@ -52,7 +52,10 @@ type (
 	Config struct {
 		// Addr stores address of api gateway
 		Addr string `yaml:"addr"`
-		Tls  TLS    `yaml:"tlc"`
+		// Proto stores protocol, it can be http or http3
+		Proto string `yaml:"proto"`
+
+		Tls TLS `yaml:"tlc"`
 		// AuthConfig stores config for auth
 		AuthConfig AuthConfig `yaml:"auth"`
 		// CORS off or on
