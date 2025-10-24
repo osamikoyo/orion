@@ -1,4 +1,5 @@
-addr: ":8443"
+addr: "localhost:8080"
+proto: "http3"
 tlc:
   cert: "certs/server.crt"
   key: "certs/server.key"
