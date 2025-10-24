@@ -4,17 +4,18 @@ import (
 	"net/http"
 
 	"github.com/osamikoyo/orion/config"
+	"github.com/osamikoyo/orion/logger"
 	"github.com/osamikoyo/orion/selfcach"
-	"github.com/rs/zerolog"
+	"go.uber.org/zap"
 )
 
 type Cache struct {
-	logger *zerolog.Logger
+	logger *logger.Logger
 	cfg    *config.Config
 	cache  *selfcach.Cache
 }
 
-func NewCache(sc *selfcach.Cache, logger *zerolog.Logger, cfg *config.Config) *Cache {
+func NewCache(sc *selfcach.Cache, logger *logger.Logger, cfg *config.Config) *Cache {
 	return &Cache{
 		logger: logger,
 		cfg:    cfg,
@@ -27,11 +28,13 @@ func (c *Cache) Middleware(next http.Handler) http.Handler {
 
 		value, ok := c.cache.Get(key)
 		if ok {
+			c.logger.Info("fetched cache for url", zap.String("url", key))
+
 			w.Write([]byte(value))
 			return
 		}
 
-		c.logger.Info().Msgf("not found url in cash, adding..")
+		c.logger.Warn("not found url in cache", zap.String("url", key))
 
 		wr := &responseWriter{ResponseWriter: w}
 		next.ServeHTTP(wr, r)
