@@ -31,6 +31,8 @@ type (
 		Auth bool `yaml:"auth"`
 		// Cash stores cashing off or on
 		Cash bool `yaml:"cash"`
+		// Rate stores rate limiting off or on
+		Rate bool `yaml:"rate"`
 	}
 
 	AuthConfig struct {
