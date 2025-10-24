@@ -6,15 +6,15 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/osamikoyo/orion/config"
-	"github.com/rs/zerolog"
+	"github.com/osamikoyo/orion/logger"
 )
 
 type AuthMW struct {
-	cfg    *config.AuthConfig
-	logger *zerolog.Logger
+	cfg    *config.Config
+	logger *logger.Logger
 }
 
-func NewAuthMW(cfg *config.AuthConfig, logger *zerolog.Logger) *AuthMW {
+func NewAuthMW(cfg *config.Config, logger *logger.Logger) *AuthMW {
 	return &AuthMW{
 		cfg:    cfg,
 		logger: logger,
@@ -30,7 +30,7 @@ func (a *AuthMW) Middleware(next http.Handler) http.Handler {
 		}
 
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			return []byte(a.cfg.Key), nil
+			return []byte(a.cfg.AuthConfig.Key), nil
 		})
 		if err != nil || !token.Valid {
 			http.Error(w, "failed to parse token", http.StatusBadGateway)
