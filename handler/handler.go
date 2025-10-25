@@ -2,36 +2,107 @@ package handler
 
 import (
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/osamikoyo/orion/auth"
+	"github.com/osamikoyo/orion/cache"
 	"github.com/osamikoyo/orion/config"
-	loadbalancer "github.com/osamikoyo/orion/laodbalancer"
+	"github.com/osamikoyo/orion/loadbalancer"
+	"github.com/osamikoyo/orion/logger"
 	"github.com/osamikoyo/orion/proxy"
+	"github.com/osamikoyo/orion/rate"
+	"github.com/osamikoyo/orion/selfcach"
+	"go.uber.org/zap"
 )
 
-type Handler struct {
-	proxy        *proxy.ProxyMW
-	loadbalancer *loadbalancer.LoadBalancer
-	cfg          *config.Config
-}
+type (
+	Middleware func(next http.Handler) http.Handler
 
-func NewHandler(proxy *proxy.ProxyMW, loadbalancer *loadbalancer.LoadBalancer, cfg *config.Config) *Handler {
+	Handler struct {
+		proxy        *proxy.ProxyMW
+		loadbalancer *loadbalancer.LoadBalancer
+		cfg          *config.Config
+		logger       *logger.Logger
+		mws          map[string][]Middleware
+	}
+)
+
+func NewHandler(proxy *proxy.ProxyMW, loadbalancer *loadbalancer.LoadBalancer, logger *logger.Logger, cfg *config.Config) *Handler {
+	sc := selfcach.NewCache(logger, time.Hour, 3*time.Hour)
+	cache := cache.NewCache(sc, logger, cfg)
+
+	rate := rate.NewRateLimitingMiddleware(logger, cfg)
+
+	auth := auth.NewAuthMW(cfg, logger)
+
+	mws := make(map[string][]Middleware)
+
+	for _, gateway := range cfg.Gateways {
+
+		var mwArr []Middleware
+
+		if gateway.Auth {
+			mwArr = append(mwArr, auth.Middleware)
+		}
+
+		if gateway.Cash {
+			mwArr = append(mwArr, cache.Middleware)
+		}
+
+		if gateway.Rate {
+			mwArr = append(mwArr, rate.RateLimitMiddleware)
+		}
+
+		mws[gateway.Prefix] = mwArr
+	}
+
 	return &Handler{
 		proxy:        proxy,
 		loadbalancer: loadbalancer,
 		cfg:          cfg,
+		mws:          mws,
+		logger:       logger,
 	}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	target, err := h.loadbalancer.Balance(r)
 	if err != nil {
+		h.logger.Error("failed balance",
+			zap.String("path", r.URL.Path),
+			zap.Error(err))
+
 		http.Error(w, "failed balance targets", http.StatusBadGateway)
 
 		return
 	}
 	defer h.loadbalancer.DecTarget(target)
 
-	mw := h.proxy.Middleware(target)
+	prefix := "/" + strings.Split(r.URL.Path, "/")[1]
 
-	mw.ServeHTTP(w, r)
+	var (
+		mws []Middleware
+		ok  bool
+	)
+
+	mws, ok = h.mws[prefix]
+	if !ok {
+		h.logger.Error("failed load mws",
+			zap.String("prefix", prefix))
+
+		mws = nil
+	}
+
+	proxymw := h.proxy.Middleware(target)
+
+	for _, mw := range mws {
+		proxymw = mw(proxymw).(http.HandlerFunc)
+	}
+
+	h.logger.Info("request was successfully setuped",
+		zap.String("target", target),
+		zap.String("prefix", prefix))
+
+	proxymw.ServeHTTP(w, r)
 }
