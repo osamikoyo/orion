@@ -41,8 +41,7 @@ type (
 	}
 
 	RateLimitingConfig struct {
-		Use        bool `yaml:"use"`
-		MaxRequest int  `yaml:"max_req"`
+		MaxRequest int `yaml:"max_req"`
 	}
 
 	CORSConfig struct {
@@ -56,7 +55,7 @@ type (
 		Addr string `yaml:"addr"`
 		// Proto stores protocol, it can be http or http3
 		Proto string `yaml:"proto"`
-
+		// TLS stores paths to TLS files
 		Tls TLS `yaml:"tlc"`
 		// AuthConfig stores config for auth
 		AuthConfig AuthConfig `yaml:"auth"`
