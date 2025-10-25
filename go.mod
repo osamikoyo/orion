@@ -13,6 +13,8 @@ require (
 	github.com/quic-go/quic-go v0.55.0 // indirect
 	github.com/redis/go-redis/v9 v9.14.0 // indirect
 	github.com/rs/zerolog v1.34.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
@@ -21,5 +23,6 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
