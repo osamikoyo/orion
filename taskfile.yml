@@ -1,0 +1,60 @@
+
+version: '3'
+
+vars:
+  BINARY_NAME: orion
+  OUTPUT_DIR: ./bin
+  MAIN_FILE: ./cmd/orion/main.go
+  GOFLAGS: -v
+  LDFLAGS: -w -s
+
+tasks:
+  build:
+    desc: Build the Orion binary
+    cmds:
+      - go build {{.GOFLAGS}} -ldflags "{{.LDFLAGS}}" -o {{.OUTPUT_DIR}}/{{.BINARY_NAME}} {{.MAIN_FILE}}
+    silent: false
+
+  run:
+    desc: Run the Orion API gateway
+    cmds:
+      - go run {{.MAIN_FILE}}
+    silent: false
+
+  clean:
+    desc: Remove build artifacts
+    cmds:
+      - rm -rf {{.OUTPUT_DIR}}
+    silent: true
+
+  test:
+    desc: Run all tests with coverage
+    cmds:
+      - go test {{.GOFLAGS}} ./... -coverprofile=coverage.out
+      - go tool cover -func=coverage.out
+    silent: false
+
+  test-race:
+    desc: Run all tests with race detection
+    cmds:
+      - go test {{.GOFLAGS}} -race ./...
+    silent: false
+
+  certs:
+    desc: Generate self assign certificates for TLS
+    cmds:
+      - openssl req -new -x509 -key server.key -out certs/server.crt -days 365 -nodes -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
+    silent: false
+
+  fmt:
+    desc: Format Go source files
+    cmds:
+      - go fmt ./...
+    silent: true
+
+  vet:
+    desc: Run go vet on the codebase
+    cmds:
+      - go vet ./...
+    silent: true
+
