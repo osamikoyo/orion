@@ -8,18 +8,19 @@ import (
 	"sync"
 
 	"github.com/osamikoyo/orion/config"
-	"github.com/rs/zerolog"
+	"github.com/osamikoyo/orion/logger"
+	"go.uber.org/zap"
 )
 
 // health checker stores components to create health check
 type HealthChecker struct {
 	// healthEndPoints stores endpoint for health request for every target
 	healthEndPoints map[string]string
-	logger          *zerolog.Logger
+	logger          *logger.Logger
 }
 
 // NewHealthChecker create HealtchChecker and parse targets in map
-func NewHealthChecker(cfg *config.Config, logger *zerolog.Logger) *HealthChecker {
+func NewHealthChecker(cfg *config.Config, logger *logger.Logger) *HealthChecker {
 	// create healthEndPoints map
 	health := make(map[string]string)
 
@@ -54,12 +55,13 @@ func (hc *HealthChecker) Check(_ context.Context) map[string]bool {
 		wg.Go(func() {
 			path := fmt.Sprintf("http://%s%s", target, endpoint)
 
-			hc.logger.Info().Msgf("forming http request to %s", path)
+			hc.logger.Info("forming healthcheck request",
+				zap.String("target", target))
 			// create http request with context
 			_, err := http.Get(path)
 			if err != nil {
 				// if unhealthy
-				hc.logger.Warn().Msgf("unhealthy target %s wit err: %v", target, err)
+				hc.logger.Warn("unhealthy service", zap.String("url", path))
 
 				mu.Lock()
 
