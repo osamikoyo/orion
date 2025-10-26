@@ -35,6 +35,11 @@ type (
 		Rate bool `yaml:"rate"`
 	}
 
+	WafConfig struct {
+		Use        bool   `yaml:"use"`
+		ConfigPath string `yaml:"config_path"`
+	}
+
 	AuthConfig struct {
 		// Key stores key for jwt
 		Key string `yaml:"key"`
@@ -57,6 +62,8 @@ type (
 		Proto string `yaml:"proto"`
 		// TLS stores paths to TLS files
 		Tls TLS `yaml:"tlc"`
+		// WafConfig stores WAF configuration
+		WAF WafConfig `yaml:"waf"`
 		// AuthConfig stores config for auth
 		AuthConfig AuthConfig `yaml:"auth"`
 		// CORS off or on
