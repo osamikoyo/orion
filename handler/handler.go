@@ -10,6 +10,7 @@ import (
 	"github.com/osamikoyo/orion/config"
 	"github.com/osamikoyo/orion/loadbalancer"
 	"github.com/osamikoyo/orion/logger"
+	"github.com/osamikoyo/orion/metrics"
 	"github.com/osamikoyo/orion/proxy"
 	"github.com/osamikoyo/orion/rate"
 	"github.com/osamikoyo/orion/selfcach"
@@ -67,6 +68,14 @@ func NewHandler(proxy *proxy.ProxyMW, loadbalancer *loadbalancer.LoadBalancer, l
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	now := time.Now()
+	path := r.URL.Path
+
+	defer func() {
+		metrics.RequestTotal.WithLabelValues(path).Inc()
+		metrics.RequestDuration.WithLabelValues(path).Observe(float64(time.Since(now).Seconds()))
+	}()
+
 	target, err := h.loadbalancer.Balance(r)
 	if err != nil {
 		h.logger.Error("failed balance",
