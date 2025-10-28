@@ -9,6 +9,7 @@ require (
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-chi/chi/v5 v5.2.3 // indirect
+	github.com/go-chi/cors v1.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
