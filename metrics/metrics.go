@@ -26,6 +26,14 @@ var (
 		},
 		[]string{"path"},
 	)
+
+	ErrorRequestTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "error_request_total",
+			Help: "Total number of error request",
+		},
+		[]string{"path"},
+	)
 )
 
 // InitMetrics() initialize metrics
