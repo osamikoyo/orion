@@ -52,7 +52,7 @@ type (
 )
 
 // NewLoadBalancer parse config in maps and create new LoadBalancer
-func NewLoadBalancer(cfg *config.Config, logger *logger.Logger, dur time.Duration) (*LoadBalancer, error) {
+func NewLoadBalancer(cfg *config.Config, logger *logger.Logger) (*LoadBalancer, error) {
 	// Check configuration on valid
 	if err := checkCfgValid(cfg); err != nil {
 		logger.Error("config is not valid", zap.Error(err))
@@ -78,24 +78,30 @@ func NewLoadBalancer(cfg *config.Config, logger *logger.Logger, dur time.Duratio
 			prefix[target.Url] = gateway.Prefix
 			targetsArr[i] = target.Url
 
+			// add info for target url
 			info[target.Url] = urlInfo{
+				// by default all urls are healthy
+				// and have zero load
 				health: true,
 				load:   0,
 			}
 		}
 
+		// add targets in map
 		targets[gateway.Prefix] = targetsArr
 	}
 
+	// setup load balancer
 	lb := &LoadBalancer{
 		healthchecker: healthchecker,
 		targets:       targets,
 		prefix:        prefix,
 		info:          info,
-		timerDur:      5 * time.Second,
+		timerDur:      cfg.HealthCheckTimeout,
 		logger:        logger,
 	}
 
+	// start regulary healthcheck
 	lb.runHealthCheck(context.Background())
 
 	return lb, nil
