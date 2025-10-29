@@ -5,7 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/osamikoyo/orion/logger"
+	"go.uber.org/zap"
 )
 
 type item struct {
@@ -14,20 +15,18 @@ type item struct {
 }
 
 type Cache struct {
-	logger *zerolog.Logger
-
 	cacheMap   map[string]item
 	mx         sync.Mutex
 	quit       chan struct{}
 	defaultTTL time.Duration
+	logger     *logger.Logger
 }
 
-func NewCache(logger *zerolog.Logger, defaultTTL, cleanupInterval time.Duration) *Cache {
+func NewCache(logger *logger.Logger, defaultTTL, cleanupInterval time.Duration) *Cache {
 	c := &Cache{
 		cacheMap:   make(map[string]item),
 		quit:       make(chan struct{}),
 		defaultTTL: defaultTTL,
-		logger:     logger,
 	}
 
 	go func() {
@@ -47,6 +46,10 @@ func NewCache(logger *zerolog.Logger, defaultTTL, cleanupInterval time.Duration)
 }
 
 func (c *Cache) Set(key string, data []byte) error {
+	c.logger.Info("setting new value in cache",
+		zap.String("key", key),
+		zap.ByteString("data", data))
+
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
