@@ -49,7 +49,7 @@ func main() {
 
 	r := chi.NewRouter()
 
-	server, err := server.NewServer(r, logger, cfg)
+	server, cancelLoad, err := server.NewServer(r, logger, cfg)
 	if err != nil {
 		logger.Error("failed to setup server", zap.Error(err))
 
@@ -72,4 +72,6 @@ func main() {
 	if err = server.Shutdown(ctx); err != nil {
 		logger.Error("failed to shutdown orion", zap.Error(err))
 	}
+
+	cancelLoad()
 }
