@@ -3,24 +3,19 @@ package loadbalancer
 
 import (
 	"context"
-	"errors"
 	"math"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/osamikoyo/orion/config"
+	"github.com/osamikoyo/orion/errors"
 	"github.com/osamikoyo/orion/healthchecker"
 	"github.com/osamikoyo/orion/logger"
 	"go.uber.org/zap"
 )
 
 const MaxLoad = math.MaxInt32
-
-var (
-	ErrNotFound    = errors.New("not found service to route request")
-	ErrUnAvalaible = errors.New("service is unavalaible")
-)
 
 type (
 	Balancer interface {
@@ -35,7 +30,7 @@ type (
 	}
 )
 
-func NewLoadBalancer(cfg *config.Config, logger *logger.Logger) (*LoadBalancer, error) {
+func NewLoadBalancer(cfg *config.Config, logger *logger.Logger) (*LoadBalancer, context.CancelFunc, error) {
 	loadbalancer := &LoadBalancer{
 		logger:        logger,
 		healthchecker: healthchecker.NewHealthChecker(cfg, logger),
@@ -49,19 +44,27 @@ func NewLoadBalancer(cfg *config.Config, logger *logger.Logger) (*LoadBalancer, 
 	default:
 		logger.Error("unknown load balancer algorithm",
 			zap.String("alg", cfg.LoadBalancerAlg))
+
+		return nil, nil, errors.ErrNoHealthyTargets
 	}
 
 	health := make(chan map[string]bool, 1)
 
-	go loadbalancer.runHealthCheck(context.Background(), health, cfg.HealthCheckTimeout)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go loadbalancer.runHealthCheck(ctx, health, cfg.HealthCheckTimeout)
 	go func() {
 		for {
-			healthinfo := <-health
-			loadbalancer.balancer.SetHealthInfo(healthinfo)
+			select {
+			case <-ctx.Done():
+				return
+			case healthinfo := <-health:
+				loadbalancer.balancer.SetHealthInfo(healthinfo)
+			}
 		}
 	}()
 
-	return loadbalancer, nil
+	return loadbalancer, cancel, nil
 }
 
 func (lb *LoadBalancer) runHealthCheck(ctx context.Context, output chan map[string]bool, dur time.Duration) {
