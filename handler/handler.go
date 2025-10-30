@@ -99,8 +99,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		http.Error(w, "failed balance targets", http.StatusBadGateway)
 
-		metrics.ErrorRequestTotal.WithLabelValues(path).Inc()
-
 		return
 	}
 
