@@ -1,25 +1,40 @@
 addr: "localhost:8080"
-proto: "http3"
-tlc:
+proto: "http"
+request_timeout: "60s"
+balancer: "wrr"
+hc_timeout: "10s"
+
+tls:
   cert: "certs/server.crt"
   key: "certs/server.key"
+
 auth:
-  key: "my-secret-jwt-key"
-cors: false
-cors_config:
-  allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-  allow_headers: ["Content-Type", "Authorization"]
+  key: "your-super-secret-32-byte-key-here"  
+
+waf:
+  use: true
+  config_path: "waf.conf"
+
+cors:
+  use: true
+  allow_origins: ["*"]
+  allow_methods: ["GET", "POST", "PUT", "DELETE"]
+  allow_headers: ["Authorization", "Content-Type"]
   max_age: 3600
+
 rate_limiting:
-  use: false
-  max_req: 100
+  max_request: 200
+
 gateways:
   - prefix: "/users"
+    auth: false
+    cache: false
+    rate: false
     targets:
+      - url: "localhost:8980"
+        weight: 3
+        health_endpoint: "/health"
       - url: "localhost:8981"
+        weight: 1
         health_endpoint: "/health"
-      - url: "localhost:8980" 
-        health_endpoint: "/health"
-    auth: false 
-    cash: false
-    rate: true
+
