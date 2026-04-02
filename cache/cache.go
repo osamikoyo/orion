@@ -1,65 +1,112 @@
-// cache middleware
 package cache
 
 import (
-	"net/http"
+	"fmt"
+	"sync"
+	"time"
 
-	"github.com/osamikoyo/orion/config"
 	"github.com/osamikoyo/orion/logger"
-	"github.com/osamikoyo/orion/selfcach"
 	"go.uber.org/zap"
 )
 
-// Cache stores components for middleware
-type Cache struct {
-	logger *logger.Logger
-	cfg    *config.Config
-	cache  *selfcach.Cache
+type item struct {
+	value []byte
+	ttl   int64
 }
 
-// NewCache() creates new Cache
-func NewCache(sc *selfcach.Cache, logger *logger.Logger, cfg *config.Config) *Cache {
-	return &Cache{
-		logger: logger,
-		cfg:    cfg,
+type cache struct {
+	cacheMap   map[string]item
+	mx         sync.Mutex
+	quit       chan struct{}
+	defaultTTL time.Duration
+	logger     *logger.Logger
+}
+
+func newCache(logger *logger.Logger, defaultTTL, cleanupInterval time.Duration) *cache {
+	c := &cache{
+		cacheMap:   make(map[string]item),
+		quit:       make(chan struct{}),
+		defaultTTL: defaultTTL,
+	}
+
+	go func() {
+		ticker := time.NewTicker(cleanupInterval)
+		for {
+			select {
+			case <-ticker.C:
+				c.cleanup()
+			case <-c.quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	return c
+}
+
+func (c *cache) Set(key string, data []byte) error {
+	c.logger.Info("setting new value in cache",
+		zap.String("key", key),
+		zap.ByteString("data", data))
+
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
+	if key == "" || data == nil {
+		return fmt.Errorf("cache key/value is invalid")
+	}
+
+	var expiry int64
+	if c.defaultTTL > 0 {
+		expiry = time.Now().Add(c.defaultTTL).UnixNano()
+	}
+
+	c.cacheMap[key] = item{value: data, ttl: expiry}
+	return nil
+}
+
+func (c *cache) Get(key string) ([]byte, bool) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
+	it, exists := c.cacheMap[key]
+	if !exists {
+		return nil, false
+	}
+
+	if it.ttl > 0 && time.Now().UnixNano() > it.ttl {
+		delete(c.cacheMap, key)
+		return nil, false
+	}
+
+	return it.value, true
+}
+
+func (c *cache) Del(key string) bool {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
+	_, exists := c.cacheMap[key]
+	if !exists {
+		return false
+	}
+	delete(c.cacheMap, key)
+	return true
+}
+
+func (c *cache) cleanup() {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
+	now := time.Now().UnixNano()
+	for k, it := range c.cacheMap {
+		if it.ttl > 0 && now > it.ttl {
+			delete(c.cacheMap, k)
+		}
 	}
 }
 
-// Middleware() creates cache middleware
-func (c *Cache) Middleware(next http.Handler) http.Handler {
-	// return handler
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := r.URL.Path
-
-		// try to get cache for url
-		value, ok := c.cache.Get(key)
-		if ok {
-			// if it was successfully found
-			// write response from cache
-			c.logger.Info("fetched cache for url", zap.String("url", key))
-
-			w.Write([]byte(value))
-			return
-		}
-
-		c.logger.Warn("not found url in cache", zap.String("url", key))
-		// if not
-		// create custome response writer and save response body in cache
-
-		wr := &responseWriter{ResponseWriter: w}
-		next.ServeHTTP(wr, r)
-		c.cache.Set(key, wr.body)
-	})
-}
-
-// custom response writer
-type responseWriter struct {
-	http.ResponseWriter
-	body []byte
-}
-
-// io.Writer realization
-func (rw *responseWriter) Write(b []byte) (int, error) {
-	rw.body = append(rw.body, b...)
-	return rw.ResponseWriter.Write(b)
+func (c *cache) StopCleanup() {
+	close(c.quit)
 }
